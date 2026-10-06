@@ -201,7 +201,10 @@ function OpenFinanceCard() {
             body: JSON.stringify({ itemId: item.id }),
           });
           const saveData = (await saveResponse.json()) as { error?: string; institutionName?: string };
-          if (!saveResponse.ok) throw new Error(saveData.error ?? "A conexão foi concluída, mas não foi salva.");
+          if (!saveResponse.ok) {
+            setError(saveData.error ?? "A conexão foi concluída, mas não foi salva.");
+            return;
+          }
           setMessage(`${saveData.institutionName ?? "Conta"} conectada com segurança.`);
           qc.invalidateQueries({ queryKey: ["open-finance-connections"] });
         },
