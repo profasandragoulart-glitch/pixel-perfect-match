@@ -21,8 +21,8 @@ export async function handleChat(request: Request) {
   const token = request.headers.get("authorization")?.replace(/^Bearer /, "");
   if (!token) return json(401, "Faça login para usar o assistente.");
 
-  const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
-  const supabase = createClient<Database>(process.env.SUPABASE_URL!, key, {
+  const key = process.env['SUPABASE_PUBLISHABLE_KEY']!;
+  const supabase = createClient<Database>(process.env['SUPABASE_URL']!, key, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
@@ -41,15 +41,15 @@ export async function handleChat(request: Request) {
     supabase.from("transactions").select("description, amount, bucket, category, occurred_on").order("occurred_on", { ascending: false }).limit(100),
   ]);
   const income = Number(profile?.monthly_income ?? 5000);
-  const totals = { necessidades: 0, estilo: 0, futuro: 0 } as Record<string, number>;
-  for (const t of txs ?? []) totals[t.bucket] = (totals[t.bucket] ?? 0) + Number(t.amount);
+  const totals = { necessidades: 0, estilo: 0, futuro: 0 };
+  for (const t of txs ?? []) if (t.bucket in totals) totals[t.bucket as keyof typeof totals] += Number(t.amount);
   const context = `\n\nDADOS DO USUÁRIO:\nRenda líquida mensal: R$ ${income.toFixed(2)}
 Reserva de emergência atual: R$ ${Number(profile?.emergency_reserve ?? 0).toFixed(2)}
 Tetos: necessidades R$ ${(income * 0.5).toFixed(2)}, estilo de vida R$ ${(income * 0.3).toFixed(2)}, futuro R$ ${(income * 0.2).toFixed(2)}
 Gasto no mês: necessidades R$ ${totals.necessidades.toFixed(2)}, estilo de vida R$ ${totals.estilo.toFixed(2)}, futuro R$ ${totals.futuro.toFixed(2)}
 Transações: ${(txs ?? []).map((t) => `${t.occurred_on} ${t.description} (${t.category}/${t.bucket}) R$ ${Number(t.amount).toFixed(2)}`).join("; ")}`;
 
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env['LOVABLE_API_KEY'];
   if (!apiKey) return json(500, "Assistente não configurado.");
   const runIdFetch = createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(request));
   const provider = createOpenAI({

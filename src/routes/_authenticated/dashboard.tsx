@@ -159,7 +159,7 @@ function Transactions({ txs }: { txs: Tx[] }) {
   const [desc, setDesc] = useState("");
   const [amount, setAmount] = useState("");
   const [bucket, setBucket] = useState<Bucket>("necessidades");
-  const [category, setCategory] = useState(CATEGORIES.necessidades[0]);
+  const [category, setCategory] = useState<string>(CATEGORIES.necessidades[0] ?? "Outros");
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -183,7 +183,7 @@ function Transactions({ txs }: { txs: Tx[] }) {
         <form onSubmit={add} className="grid gap-2 md:grid-cols-5">
           <Input required placeholder="Descrição" value={desc} onChange={(e) => setDesc(e.target.value)} />
           <Input required type="number" step="0.01" min="0" placeholder="Valor" value={amount} onChange={(e) => setAmount(e.target.value)} />
-          <select className={sel} value={bucket} onChange={(e) => { const b = e.target.value as Bucket; setBucket(b); setCategory(CATEGORIES[b][0]); }}>
+          <select className={sel} value={bucket} onChange={(e) => { const b = e.target.value as Bucket; setBucket(b); setCategory(CATEGORIES[b][0] ?? "Outros"); }}>
             {BUCKETS.map((b) => <option key={b.key} value={b.key}>{b.label}</option>)}
           </select>
           <select className={sel} value={category} onChange={(e) => setCategory(e.target.value)}>
