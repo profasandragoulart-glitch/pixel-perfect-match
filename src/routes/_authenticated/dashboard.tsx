@@ -112,16 +112,53 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 type Tx = { id: string; description: string; amount: number; bucket: string; category: string; occurred_on: string };
 
 function Overview({ income, totals, reserve, txs }: { income: number; totals: Record<Bucket, number>; reserve: number; txs: Tx[] }) {
-  const fixed = totals.necessidades;
+  const now = new Date();
+  const monthKey = now.toISOString().slice(0, 7);
+  const monthTxs = txs.filter((t) => t.occurred_on?.slice(0, 7) === monthKey);
+  const monthTotals = monthTxs.reduce<Record<Bucket, number>>(
+    (acc, t) => {
+      if (t.bucket in acc) acc[t.bucket as Bucket] += Number(t.amount);
+      return acc;
+    },
+    { necessidades: 0, estilo: 0, futuro: 0 },
+  );
+  const fixed = monthTotals.necessidades;
   const target = fixed * 6;
-  const subs = txs.filter((t) => t.category === "Assinaturas");
-  const spent = totals.necessidades + totals.estilo + totals.futuro;
+  const subs = monthTxs.filter((t) => t.category === "Assinaturas");
+  const spent = monthTotals.necessidades + monthTotals.estilo + monthTotals.futuro;
   const available = Math.max(0, income - spent);
-  const alerts = BUCKETS.filter((b) => b.key !== "futuro" && totals[b.key] / (income * b.pct) >= 0.8);
-  const latest = txs.slice(0, 4);
+  const alerts = BUCKETS.filter((b) => b.key !== "futuro" && monthTotals[b.key] / Math.max(income * b.pct, 1) >= 0.8);
+  const latest = monthTxs.slice(0, 4);
+  const usage = spent / Math.max(income, 1);
+  const health = usage >= 1 ? "Atenção" : alerts.length > 0 ? "Observe seus gastos" : "Você está bem este mês";
+  const healthTone = usage >= 1 || alerts.length > 0 ? "bg-warning/10 text-warning" : "bg-bucket-3/10 text-bucket-3";
+  const nextAction = usage >= 1
+    ? "Pause gastos não essenciais até reorganizar o orçamento."
+    : alerts.length > 0
+      ? "Revise as categorias que estão perto do limite antes de continuar gastando."
+      : reserve < target
+        ? "Priorize sua reserva de emergência com uma pequena transferência este mês."
+        : "Mantenha o ritmo e registre os próximos gastos para acompanhar seu mês.";
 
   return (
     <div className="space-y-4">
+      <Card className="border-primary/10">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Sua saúde financeira</p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <h2 className="font-display text-2xl font-bold">{health}</h2>
+              <span className={`rounded-full px-3 py-1 text-xs font-medium ${healthTone}`}>Mês atual</span>
+            </div>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">O painel considera apenas os lançamentos deste mês para evitar misturar meses diferentes.</p>
+          </div>
+          <div className="rounded-xl bg-muted/60 px-4 py-3 md:min-w-[230px]">
+            <p className="text-xs text-muted-foreground">Próximo passo</p>
+            <p className="mt-1 text-sm font-medium leading-relaxed">{nextAction}</p>
+          </div>
+        </div>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-12">
         <Card className="relative overflow-hidden border-primary/10 bg-primary text-primary-foreground lg:col-span-5">
           <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-white/10" />
@@ -155,7 +192,7 @@ function Overview({ income, totals, reserve, txs }: { income: number; totals: Re
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               {BUCKETS.map((b) => {
                 const cap = income * b.pct;
-                const used = totals[b.key];
+                const used = monthTotals[b.key];
                 const pct = Math.min(100, (used / Math.max(cap, 1)) * 100);
                 return (
                   <div key={b.key} className="rounded-xl bg-muted/60 p-3">
@@ -188,7 +225,7 @@ function Overview({ income, totals, reserve, txs }: { income: number; totals: Re
             {alerts.map((b) => (
               <li key={b.key} className="flex gap-3 rounded-xl bg-warning/10 p-3">
                 <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
-                <span>Você já usou {Math.round((totals[b.key] / (income * b.pct)) * 100)}% do teto de {b.label.toLowerCase()}. Evite novas compras por enquanto.</span>
+                <span>Você já usou {Math.round((monthTotals[b.key] / (income * b.pct)) * 100)}% do teto de {b.label.toLowerCase()}. Evite novas compras por enquanto.</span>
               </li>
             ))}
             {subs.length > 0 && (
@@ -209,7 +246,7 @@ function Overview({ income, totals, reserve, txs }: { income: number; totals: Re
               <h3 className="font-semibold">Últimos lançamentos</h3>
               <p className="mt-1 text-sm text-muted-foreground">Seu movimento mais recente.</p>
             </div>
-            <span className="text-xs text-muted-foreground">{txs.length} total</span>
+            <span className="text-xs text-muted-foreground">{monthTxs.length} este mês</span>
           </div>
           <div className="mt-4 divide-y">
             {latest.length === 0 && <p className="py-4 text-sm text-muted-foreground">Nenhum lançamento ainda.</p>}
@@ -371,7 +408,7 @@ function OpenFinanceCard() {
             <h3 className="font-semibold">Conecte seu banco</h3>
           </div>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Conecte uma conta pelo Open Finance para substituir lançamentos manuais por dados bancários sincronizados.
+            Conecte uma conta pelo Open Finance para trazer seus lançamentos automaticamente e reduzir o trabalho manual.
             Suas credenciais bancárias são tratadas pelo Connect Widget da Pluggy.
           </p>
           {message && <p className="mt-2 text-sm text-bucket-3">{message}</p>}
