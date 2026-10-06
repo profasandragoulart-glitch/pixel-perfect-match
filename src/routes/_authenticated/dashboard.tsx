@@ -114,7 +114,7 @@ type Tx = { id: string; description: string; amount: number; bucket: string; cat
 
 function Overview({ income, totals, reserve, txs, onTabChange }: { income: number; totals: Record<Bucket, number>; reserve: number; txs: Tx[]; onTabChange: (tab: string) => void }) {
   const now = new Date();
-  const monthKey = now.toISOString().slice(0, 7);
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const monthTxs = txs.filter((t) => t.occurred_on?.slice(0, 7) === monthKey);
   const monthTotals = monthTxs.reduce<Record<Bucket, number>>(
     (acc, t) => {
@@ -128,6 +128,10 @@ function Overview({ income, totals, reserve, txs, onTabChange }: { income: numbe
   const subs = monthTxs.filter((t) => t.category === "Assinaturas");
   const spent = monthTotals.necessidades + monthTotals.estilo + monthTotals.futuro;
   const available = Math.max(0, income - spent);
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysRemaining = Math.max(1, daysInMonth - now.getDate() + 1);
+  const dailySafeSpend = available / daysRemaining;
+  const savingsRate = Math.max(0, (income - spent) / Math.max(income, 1));
   const alerts = BUCKETS.filter((b) => b.key !== "futuro" && monthTotals[b.key] / Math.max(income * b.pct, 1) >= 0.8);
   const latest = monthTxs.slice(0, 4);
   const usage = spent / Math.max(income, 1);
@@ -173,14 +177,14 @@ function Overview({ income, totals, reserve, txs, onTabChange }: { income: numbe
         </Card>
         <div className="grid gap-4 sm:grid-cols-2 lg:col-span-7">
           <Card>
-            <p className="text-sm text-muted-foreground">Gastos registrados</p>
-            <p className="mt-2 font-display text-3xl font-bold">{brl(spent)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">de {brl(income)} da renda</p>
+            <p className="text-sm text-muted-foreground">Ritmo seguro por dia</p>
+            <p className="mt-2 font-display text-3xl font-bold">{brl(dailySafeSpend)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{daysRemaining} dia{daysRemaining === 1 ? "" : "s"} restantes no mês</p>
           </Card>
           <Card>
-            <p className="text-sm text-muted-foreground">Reserva de emergência</p>
-            <p className="mt-2 font-display text-3xl font-bold">{brl(reserve)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Meta: 6 meses de necessidades</p>
+            <p className="text-sm text-muted-foreground">Quanto está sobrando</p>
+            <p className="mt-2 font-display text-3xl font-bold">{Math.round(savingsRate * 100)}%</p>
+            <p className="mt-1 text-xs text-muted-foreground">{brl(available)} ainda disponível neste mês</p>
           </Card>
           <Card className="sm:col-span-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
