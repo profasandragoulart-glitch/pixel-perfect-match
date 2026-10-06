@@ -224,15 +224,17 @@ function Overview({ income, totals, reserve, txs, onTabChange }: { income: numbe
           </div>
           <ul className="mt-5 space-y-3 text-sm">
             {alerts.map((b) => (
-              <li key={b.key} className="flex gap-3 rounded-xl bg-warning/10 p-3">
+              <li key={b.key} className="flex flex-col gap-3 rounded-xl bg-warning/10 p-3 sm:flex-row sm:items-center">
                 <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
-                <span>Você já usou {Math.round((monthTotals[b.key] / (income * b.pct)) * 100)}% do teto de {b.label.toLowerCase()}. Evite novas compras por enquanto.</span>
+                <span className="flex-1">Você já usou {Math.round((monthTotals[b.key] / Math.max(income * b.pct, 1)) * 100)}% do teto de {b.label.toLowerCase()}. Evite novas compras por enquanto.</span>
+                <Button variant="outline" size="sm" onClick={() => onTabChange("gastos")}>Ver gastos</Button>
               </li>
             ))}
             {subs.length > 0 && (
-              <li className="flex gap-3 rounded-xl bg-warning/10 p-3">
+              <li className="flex flex-col gap-3 rounded-xl bg-warning/10 p-3 sm:flex-row sm:items-center">
                 <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
-                <span>{subs.length} assinatura{subs.length > 1 ? "s" : ""} somam {brl(subs.reduce((s, t) => s + Number(t.amount), 0))}/mês. Vale revisar o que você realmente usa.</span>
+                <span className="flex-1">{subs.length} assinatura{subs.length > 1 ? "s" : ""} somam {brl(subs.reduce((s, t) => s + Number(t.amount), 0))}/mês. Vale revisar o que você realmente usa.</span>
+                <Button variant="outline" size="sm" onClick={() => onTabChange("gastos")}>Revisar gastos</Button>
               </li>
             )}
             {alerts.length === 0 && subs.length === 0 && (
