@@ -17,6 +17,7 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiOpenFinanceConnectTokenRouteImport } from './routes/api/open-finance/connect-token'
 import { Route as ApiOpenFinanceItemsRouteImport } from './routes/api/open-finance/items'
 import { Route as ApiOpenFinanceSyncRouteImport } from './routes/api/open-finance/sync'
+import { Route as ApiOpenFinanceWebhookRouteImport } from './routes/api/open-finance/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -57,6 +58,11 @@ const ApiOpenFinanceSyncRoute = ApiOpenFinanceSyncRouteImport.update({
   path: '/api/open-finance/sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOpenFinanceWebhookRoute = ApiOpenFinanceWebhookRouteImport.update({
+  id: '/api/open-finance/webhook',
+  path: '/api/open-finance/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/api/open-finance/connect-token': typeof ApiOpenFinanceConnectTokenRoute
   '/api/open-finance/items': typeof ApiOpenFinanceItemsRoute
   '/api/open-finance/sync': typeof ApiOpenFinanceSyncRoute
+  '/api/open-finance/webhook': typeof ApiOpenFinanceWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -88,9 +95,9 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/api/chat' | '/api/open-finance/connect-token' | '/api/open-finance/items' | '/api/open-finance/sync'
+  fullPaths: '/' | '/auth' | '/dashboard' | '/api/chat' | '/api/open-finance/connect-token' | '/api/open-finance/items' | '/api/open-finance/sync' | '/api/open-finance/webhook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/api/chat' | '/api/open-finance/connect-token' | '/api/open-finance/items' | '/api/open-finance/sync'
+  to: '/' | '/auth' | '/dashboard' | '/api/chat' | '/api/open-finance/connect-token' | '/api/open-finance/items' | '/api/open-finance/sync' | '/api/open-finance/webhook'
   id:
     | '__root__'
     | '/'
@@ -101,6 +108,7 @@ export interface FileRouteTypes {
     | '/api/open-finance/connect-token'
     | '/api/open-finance/items'
     | '/api/open-finance/sync'
+    | '/api/open-finance/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -170,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOpenFinanceSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/open-finance/webhook': {
+      id: '/api/open-finance/webhook'
+      path: '/api/open-finance/webhook'
+      fullPath: '/api/open-finance/webhook'
+      preLoaderRoute: typeof ApiOpenFinanceWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -192,6 +207,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOpenFinanceConnectTokenRoute: ApiOpenFinanceConnectTokenRoute,
   ApiOpenFinanceItemsRoute: ApiOpenFinanceItemsRoute,
   ApiOpenFinanceSyncRoute: ApiOpenFinanceSyncRoute,
+  ApiOpenFinanceWebhookRoute: ApiOpenFinanceWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
