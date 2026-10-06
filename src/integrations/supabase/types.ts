@@ -48,6 +48,10 @@ export type Database = {
           id: string
           occurred_on: string
           user_id: string
+          source: string
+          provider: string | null
+          provider_transaction_id: string | null
+          provider_account_id: string | null
         }
         Insert: {
           amount: number
@@ -58,6 +62,10 @@ export type Database = {
           id?: string
           occurred_on?: string
           user_id: string
+          source?: string
+          provider?: string | null
+          provider_transaction_id?: string | null
+          provider_account_id?: string | null
         }
         Update: {
           amount?: number
@@ -68,6 +76,10 @@ export type Database = {
           id?: string
           occurred_on?: string
           user_id?: string
+          source?: string
+          provider?: string | null
+          provider_transaction_id?: string | null
+          provider_account_id?: string | null
         }
         Relationships: []
       }
@@ -84,6 +96,54 @@ export type Database = {
           updated_at: string
           user_id: string
         }
+      open_finance_accounts: {
+        Row: {
+          account_id: string
+          balance: number | null
+          connection_id: string
+          created_at: string
+          currency_code: string | null
+          id: string
+          name: string | null
+          number: string | null
+          provider: string
+          subtype: string | null
+          type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          balance?: number | null
+          connection_id: string
+          created_at?: string
+          currency_code?: string | null
+          id?: string
+          name?: string | null
+          number?: string | null
+          provider?: string
+          subtype?: string | null
+          type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          balance?: number | null
+          connection_id?: string
+          created_at?: string
+          currency_code?: string | null
+          id?: string
+          name?: string | null
+          number?: string | null
+          provider?: string
+          subtype?: string | null
+          type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
         Insert: {
           created_at?: string
           execution_status?: string | null
