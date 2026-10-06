@@ -173,6 +173,35 @@ function OpenFinanceCard() {
     },
   });
 
+  async function syncBank(itemId: string) {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Sua sessão expirou. Entre novamente.");
+
+      const response = await fetch("/api/open-finance/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ itemId }),
+      });
+      const data = (await response.json()) as { error?: string; imported?: number };
+      if (!response.ok) throw new Error(data.error ?? "Não foi possível atualizar sua conta.");
+      setMessage(`Conta atualizada: ${data.imported ?? 0} transações conferidas.`);
+      qc.invalidateQueries({ queryKey: ["open-finance-connections"] });
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível atualizar sua conta.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function connectBank() {
     setLoading(true);
     setError(null);
@@ -249,9 +278,17 @@ function OpenFinanceCard() {
           {message && <p className="mt-2 text-sm text-bucket-3">{message}</p>}
           {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
           {connections.data?.map((connection) => (
-            <p key={connection.id} className="mt-2 text-xs text-muted-foreground">
-              {connection.institution_name ?? "Instituição financeira"} · {connection.status ?? "conectando"} · atualização {new Date(connection.updated_at).toLocaleDateString("pt-BR")}
-            </p>
+            <div key={connection.id} className="mt-3 flex flex-col gap-2 rounded-xl border bg-muted/30 p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium">{connection.institution_name ?? "Instituição financeira"}</p>
+                <p className="text-muted-foreground">
+                  {connection.status === "UPDATED" ? "Conectada" : connection.status ?? "Verificando"} · última atualização {new Date(connection.updated_at).toLocaleString("pt-BR")}
+                </p>
+              </div>
+              <Button variant="outline" size="sm" disabled={loading} onClick={() => syncBank(connection.item_id)}>
+                Atualizar agora
+              </Button>
+            </div>
           ))}
         </div>
         <Button onClick={connectBank} disabled={loading} className="shrink-0">
