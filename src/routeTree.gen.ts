@@ -75,6 +75,8 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/open-finance/connect-token': typeof ApiOpenFinanceConnectTokenRoute
+  '/api/open-finance/items': typeof ApiOpenFinanceItemsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -88,6 +90,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/dashboard'
     | '/api/chat'
+    | '/api/open-finance/connect-token'
+    | '/api/open-finance/items'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
