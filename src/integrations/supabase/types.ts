@@ -96,6 +96,48 @@ export type Database = {
           updated_at: string
           user_id: string
         }
+      open_finance_webhook_events: {
+        Row: {
+          id: string
+          provider: string
+          event_id: string
+          event: string
+          item_id: string | null
+          payload: Json
+          status: string
+          attempts: number
+          received_at: string
+          processed_at: string | null
+          last_error: string | null
+        }
+        Insert: {
+          id?: string
+          provider?: string
+          event_id: string
+          event: string
+          item_id?: string | null
+          payload: Json
+          status?: string
+          attempts?: number
+          received_at?: string
+          processed_at?: string | null
+          last_error?: string | null
+        }
+        Update: {
+          id?: string
+          provider?: string
+          event_id?: string
+          event?: string
+          item_id?: string | null
+          payload?: Json
+          status?: string
+          attempts?: number
+          received_at?: string
+          processed_at?: string | null
+          last_error?: string | null
+        }
+        Relationships: []
+      }
       open_finance_accounts: {
         Row: {
           account_id: string
