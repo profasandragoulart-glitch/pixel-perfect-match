@@ -82,6 +82,7 @@ export interface FileRoutesByTo {
   '/api/open-finance/connect-token': typeof ApiOpenFinanceConnectTokenRoute
   '/api/open-finance/items': typeof ApiOpenFinanceItemsRoute
   '/api/open-finance/sync': typeof ApiOpenFinanceSyncRoute
+  '/api/open-finance/webhook': typeof ApiOpenFinanceWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -108,6 +109,7 @@ export interface FileRouteTypes {
     | '/api/open-finance/connect-token'
     | '/api/open-finance/items'
     | '/api/open-finance/sync'
+    | '/api/open-finance/webhook'
     | '/api/open-finance/webhook'
   fileRoutesById: FileRoutesById
 }
