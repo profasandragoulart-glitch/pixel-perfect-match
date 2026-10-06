@@ -150,9 +150,132 @@ function Overview({ income, totals, reserve, txs }: { income: number; totals: Re
           <div className="h-full bg-bucket-3" style={{ width: `${target ? Math.min(100, (reserve / target) * 100) : 0}%` }} />
         </div>
       </Card>
+      <OpenFinanceCard />
     </div>
   );
 }
+
+function OpenFinanceCard() {
+  const qc = useQueryClient();
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const connections = useQuery({
+    queryKey: ["open-finance-connections"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("open_finance_connections")
+        .select("id, institution_name, status, execution_status, item_id, updated_at")
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  async function connectBank() {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Sua sessão expirou. Entre novamente.");
+
+      const tokenResponse = await fetch("/api/open-finance/connect-token", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const tokenData = (await tokenResponse.json()) as { accessToken?: string; error?: string };
+      if (!tokenResponse.ok || !tokenData.accessToken) throw new Error(tokenData.error ?? "Não foi possível iniciar a conexão.");
+
+      const widget = await loadPluggyWidget(tokenData.accessToken);
+      widget.init({
+        onSuccess: async ({ item }: { item: { id: string } }) => {
+          const saveResponse = await fetch("/api/open-finance/items", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ itemId: item.id }),
+          });
+          const saveData = (await saveResponse.json()) as { error?: string; institutionName?: string };
+          if (!saveResponse.ok) throw new Error(saveData.error ?? "A conexão foi concluída, mas não foi salva.");
+          setMessage(`${saveData.institutionName ?? "Conta"} conectada com segurança.`);
+          qc.invalidateQueries({ queryKey: ["open-finance-connections"] });
+        },
+        onError: ({ message }: { message?: string }) => {
+          setError(message ?? "Não foi possível concluir a conexão.");
+        },
+        onClose: () => setLoading(false),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível iniciar o Open Finance.");
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Card className="md:col-span-3">
+      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Landmark className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">Conecte seu banco</h3>
+          </div>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            Conecte uma conta pelo Open Finance para substituir lançamentos manuais por dados bancários sincronizados.
+            Suas credenciais bancárias são tratadas pelo Connect Widget da Pluggy.
+          </p>
+          {message && <p className="mt-2 text-sm text-bucket-3">{message}</p>}
+          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+          {connections.data?.map((connection) => (
+            <p key={connection.id} className="mt-2 text-xs text-muted-foreground">
+              {connection.institution_name ?? "Instituição financeira"} · {connection.status ?? "conectando"} · atualização {new Date(connection.updated_at).toLocaleDateString("pt-BR")}
+            </p>
+          ))}
+        </div>
+        <Button onClick={connectBank} disabled={loading} className="shrink-0">
+          {loading ? "Conectando..." : connections.data?.length ? "Conectar outra conta" : "Conectar minha conta"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+async function loadPluggyWidget(connectToken: string) {
+
+  await new Promise<void>((resolve, reject) => {
+    const current = document.querySelector('script[data-pluggy-connect="true"]');
+    if (current) {
+      current.addEventListener("load", () => resolve(), { once: true });
+      current.addEventListener("error", () => reject(new Error("Não foi possível carregar o Connect Widget.")), { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://cdn.pluggy.ai/pluggy-connect/v2.3.1/pluggy-connect.js";
+    script.async = true;
+    script.dataset.pluggyConnect = "true";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Não foi possível carregar o Connect Widget."));
+    document.head.appendChild(script);
+  });
+
+  const PluggyConnect = (window as unknown as { PluggyConnect?: PluggyConnectConstructor }).PluggyConnect;
+  if (!PluggyConnect) throw new Error("Connect Widget indisponível.");
+  return new PluggyConnect({
+    connectToken,
+  });
+}
+
+type PluggyConnectConstructor = new (options: {
+  connectToken: string;
+  includeSandbox?: boolean;
+  onSuccess?: (data: { item: { id: string } }) => void | Promise<void>;
+  onError?: (error: { message?: string }) => void;
+  onClose?: () => void;
+}) => { init: () => void };
 
 function Transactions({ txs }: { txs: Tx[] }) {
   const qc = useQueryClient();
