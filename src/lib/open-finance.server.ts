@@ -337,3 +337,62 @@ export async function receivePluggyWebhook(request: Request) {
     return json(400, { error: "Webhook inválido." });
   }
 }
+
+
+type PluggyWebhookPayload = {
+  event?: string;
+  eventId?: string;
+  itemId?: string;
+  transactionIds?: string[];
+  clientUserId?: string;
+};
+
+function getServiceSupabase() {
+  const url = process.env["SUPABASE_URL"];
+  const key = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+  if (!url || !key) throw new Error("Supabase não configurado para receber webhooks.");
+  return createClient<Database>(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+export async function receivePluggyWebhook(request: Request) {
+  const configuredSecret = process.env["PLUGGY_WEBHOOK_SECRET"];
+  const receivedSecret = request.headers.get("x-pluggy-webhook-secret");
+  if (!configuredSecret || !receivedSecret || receivedSecret !== configuredSecret) {
+    return json(401, { error: "Webhook não autorizado." });
+  }
+
+  try {
+    const payload = (await request.json()) as PluggyWebhookPayload;
+    const eventId = payload.eventId?.trim();
+    const event = payload.event?.trim();
+    const itemId = payload.itemId?.trim() || null;
+
+    if (!eventId || !event) return json(400, { error: "Evento inválido." });
+
+    const supabase = getServiceSupabase();
+    const { error } = await supabase.from("open_finance_webhook_events").upsert(
+      {
+        provider: "pluggy",
+        event_id: eventId,
+        event,
+        item_id: itemId,
+        transaction_ids: payload.transactionIds ?? null,
+        payload,
+        status: "pending",
+      },
+      { onConflict: "provider,event_id", ignoreDuplicates: true },
+    );
+
+    if (error) {
+      console.error("[Open Finance] webhook queue:", error);
+      return json(500, { error: "Não foi possível registrar o evento." });
+    }
+
+    return json(202, { received: true });
+  } catch (error) {
+    console.error("[Open Finance] webhook:", error);
+    return json(500, { error: "Não foi possível receber o evento." });
+  }
+}
