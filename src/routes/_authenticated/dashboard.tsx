@@ -205,8 +205,23 @@ function OpenFinanceCard() {
             setError(saveData.error ?? "A conexão foi concluída, mas não foi salva.");
             return;
           }
-          setMessage(`${saveData.institutionName ?? "Conta"} conectada com segurança.`);
+          const syncResponse = await fetch("/api/open-finance/sync", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ itemId: item.id }),
+          });
+          const syncData = (await syncResponse.json()) as { error?: string; accounts?: number; imported?: number };
+          if (!syncResponse.ok) {
+            setMessage(`${saveData.institutionName ?? "Conta"} conectada. A sincronização inicial ainda precisa ser concluída.`);
+            setError(syncData.error ?? "Não foi possível importar as transações agora.");
+          } else {
+            setMessage(`${saveData.institutionName ?? "Conta"} conectada: ${syncData.imported ?? 0} transações importadas.`);
+          }
           qc.invalidateQueries({ queryKey: ["open-finance-connections"] });
+          qc.invalidateQueries({ queryKey: ["transactions"] });
         },
         onError: ({ message }: { message?: string }) => {
           setError(message ?? "Não foi possível concluir a conexão.");
