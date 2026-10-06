@@ -16,6 +16,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiOpenFinanceConnectTokenRouteImport } from './routes/api/open-finance/connect-token'
 import { Route as ApiOpenFinanceItemsRouteImport } from './routes/api/open-finance/items'
+import { Route as ApiOpenFinanceSyncRouteImport } from './routes/api/open-finance/sync'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -51,6 +52,11 @@ const ApiOpenFinanceItemsRoute = ApiOpenFinanceItemsRouteImport.update({
   path: '/api/open-finance/items',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOpenFinanceSyncRoute = ApiOpenFinanceSyncRouteImport.update({
+  id: '/api/open-finance/sync',
+  path: '/api/open-finance/sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/open-finance/connect-token': typeof ApiOpenFinanceConnectTokenRoute
   '/api/open-finance/items': typeof ApiOpenFinanceItemsRoute
+  '/api/open-finance/sync': typeof ApiOpenFinanceSyncRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -92,6 +99,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/open-finance/connect-token'
     | '/api/open-finance/items'
+    | '/api/open-finance/sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -175,6 +183,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiOpenFinanceConnectTokenRoute: ApiOpenFinanceConnectTokenRoute,
   ApiOpenFinanceItemsRoute: ApiOpenFinanceItemsRoute,
+  ApiOpenFinanceSyncRoute: ApiOpenFinanceSyncRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
