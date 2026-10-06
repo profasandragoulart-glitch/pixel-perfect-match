@@ -74,6 +74,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/open-finance/connect-token': typeof ApiOpenFinanceConnectTokenRoute
   '/api/open-finance/items': typeof ApiOpenFinanceItemsRoute
+  '/api/open-finance/sync': typeof ApiOpenFinanceSyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -87,9 +88,9 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/api/chat' | '/api/open-finance/connect-token' | '/api/open-finance/items'
+  fullPaths: '/' | '/auth' | '/dashboard' | '/api/chat' | '/api/open-finance/connect-token' | '/api/open-finance/items' | '/api/open-finance/sync'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/api/chat' | '/api/open-finance/connect-token' | '/api/open-finance/items'
+  to: '/' | '/auth' | '/dashboard' | '/api/chat' | '/api/open-finance/connect-token' | '/api/open-finance/items' | '/api/open-finance/sync'
   id:
     | '__root__'
     | '/'
@@ -160,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/api/open-finance/items'
       fullPath: '/api/open-finance/items'
       preLoaderRoute: typeof ApiOpenFinanceItemsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/open-finance/sync': {
+      id: '/api/open-finance/sync'
+      path: '/api/open-finance/sync'
+      fullPath: '/api/open-finance/sync'
+      preLoaderRoute: typeof ApiOpenFinanceSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
