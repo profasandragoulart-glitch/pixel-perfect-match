@@ -272,3 +272,68 @@ export async function syncPluggyItem(request: Request) {
     return json(502, { error: "Não foi possível sincronizar os dados bancários agora." });
   }
 }
+
+
+function getAdminSupabase() {
+  const url = process.env["SUPABASE_URL"];
+  const serviceRoleKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+  if (!url || !serviceRoleKey) throw new Error("Supabase administrativo não configurado.");
+  return createClient<Database>(url, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+function constantTimeEqual(left: string, right: string) {
+  if (left.length !== right.length) return false;
+  let result = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    result |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return result === 0;
+}
+
+export async function receivePluggyWebhook(request: Request) {
+  const expectedSecret = process.env["PLUGGY_WEBHOOK_SECRET"];
+  const receivedSecret = request.headers.get("x-webhook-secret");
+  if (!expectedSecret || !receivedSecret || !constantTimeEqual(receivedSecret, expectedSecret)) {
+    return json(401, { error: "Webhook não autorizado." });
+  }
+
+  try {
+    const payload = (await request.json()) as {
+      event?: string;
+      eventId?: string;
+      itemId?: string;
+      [key: string]: unknown;
+    };
+    const eventId = payload.eventId?.trim();
+    const event = payload.event?.trim();
+
+    if (!eventId || !event || eventId.length > 100 || event.length > 100) {
+      return json(400, { error: "Payload de webhook inválido." });
+    }
+
+    const supabase = getAdminSupabase();
+    const { error } = await supabase.from("open_finance_webhook_events").upsert(
+      {
+        provider: "pluggy",
+        event_id: eventId,
+        event,
+        item_id: payload.itemId ?? null,
+        payload,
+        status: "pending",
+      },
+      { onConflict: "provider,event_id", ignoreDuplicates: true },
+    );
+
+    if (error) {
+      console.error("[Open Finance] webhook queue:", error);
+      return json(500, { error: "Não foi possível registrar o evento." });
+    }
+
+    return json(200, { received: true });
+  } catch (error) {
+    console.error("[Open Finance] webhook:", error);
+    return json(400, { error: "Webhook inválido." });
+  }
+}
