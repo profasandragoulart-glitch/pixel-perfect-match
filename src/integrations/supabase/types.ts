@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          emergency_reserve: number
+          id: string
+          monthly_income: number
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          emergency_reserve?: number
+          id: string
+          monthly_income?: number
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          emergency_reserve?: number
+          id?: string
+          monthly_income?: number
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          bucket: string
+          category: string
+          created_at: string
+          description: string
+          id: string
+          occurred_on: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bucket?: string
+          category?: string
+          created_at?: string
+          description: string
+          id?: string
+          occurred_on?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bucket?: string
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          occurred_on?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
