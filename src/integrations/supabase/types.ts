@@ -71,6 +71,45 @@ export type Database = {
         }
         Relationships: []
       }
+      open_finance_connections: {
+        Row: {
+          created_at: string
+          execution_status: string | null
+          id: string
+          institution_name: string | null
+          item_id: string
+          last_updated_at: string | null
+          provider: string
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          execution_status?: string | null
+          id?: string
+          institution_name?: string | null
+          item_id: string
+          last_updated_at?: string | null
+          provider?: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          execution_status?: string | null
+          id?: string
+          institution_name?: string | null
+          item_id?: string
+          last_updated_at?: string | null
+          provider?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
