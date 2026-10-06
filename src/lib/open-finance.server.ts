@@ -133,3 +133,142 @@ export async function savePluggyItem(request: Request) {
     return json(503, { error: "Não foi possível validar a conexão com a Pluggy." });
   }
 }
+
+
+type PluggyAccount = {
+  id: string;
+  type?: string;
+  subtype?: string;
+  name?: string | null;
+  number?: string | null;
+  balance?: number | null;
+  currencyCode?: string | null;
+};
+
+type PluggyTransaction = {
+  id: string;
+  accountId: string;
+  description?: string | null;
+  amount?: number | null;
+  date?: string | null;
+  type?: "CREDIT" | "DEBIT" | string | null;
+  category?: string | null;
+};
+
+async function pluggyGet<T>(path: string, apiKey: string) {
+  const response = await fetch(PLUGGY_BASE_URL + path, {
+    headers: { "X-API-KEY": apiKey },
+  });
+  const data = (await response.json()) as T & { message?: string };
+  if (!response.ok) throw new Error(data.message ?? "Falha ao consultar a Pluggy.");
+  return data;
+}
+
+function categoryFromTransaction(transaction: PluggyTransaction) {
+  const text = (transaction.category ?? "") + " " + (transaction.description ?? "");
+  const normalized = text.toLowerCase();
+  if (/mercado|supermercado|carrefour|assai|atacad/.test(normalized)) return { bucket: "necessidades", category: "Mercado" };
+  if (/aluguel|condominio|energia|água|agua|internet|telefone|luz/.test(normalized)) return { bucket: "necessidades", category: "Contas" };
+  if (/uber|99\b|combust|posto|estacionamento|gasolina/.test(normalized)) return { bucket: "necessidades", category: "Transporte" };
+  if (/farmacia|farmácia|hospital|clinica|clínica|saude|saúde/.test(normalized)) return { bucket: "necessidades", category: "Saúde" };
+  if (/ifood|delivery|restaurante|lanch|bar\b/.test(normalized)) return { bucket: "estilo", category: "Delivery" };
+  if (/netflix|spotify|amazon prime|prime video|disney|streaming/.test(normalized)) return { bucket: "estilo", category: "Assinaturas" };
+  if (/shopping|loja|roupa|vestuario|vestuário/.test(normalized)) return { bucket: "estilo", category: "Compras" };
+  if (/cinema|show|viagem|hotel|lazer/.test(normalized)) return { bucket: "estilo", category: "Lazer" };
+  return { bucket: "necessidades", category: "Outros" };
+}
+
+export async function syncPluggyItem(request: Request) {
+  const auth = await getUserFromRequest(request);
+  if (!auth) return json(401, { error: "Faça login para sincronizar suas contas." });
+
+  try {
+    const body = (await request.json()) as { itemId?: string };
+    const itemId = body.itemId?.trim();
+    if (!itemId) return json(400, { error: "Conexão inválida." });
+
+    const { data: connection, error: connectionError } = await auth.supabase
+      .from("open_finance_connections")
+      .select("id,item_id")
+      .eq("user_id", auth.user.id)
+      .eq("provider", "pluggy")
+      .eq("item_id", itemId)
+      .maybeSingle();
+
+    if (connectionError || !connection) return json(404, { error: "Conexão Open Finance não encontrada." });
+
+    const apiKey = await getPluggyApiKey();
+    const accountsData = await pluggyGet<{ results?: PluggyAccount[] }>(
+      "/accounts?itemId=" + encodeURIComponent(itemId),
+      apiKey,
+    );
+    const accounts = accountsData.results ?? [];
+    let imported = 0;
+
+    for (const account of accounts) {
+      const accountResult = await auth.supabase.from("open_finance_accounts").upsert(
+        {
+          connection_id: connection.id,
+          user_id: auth.user.id,
+          provider: "pluggy",
+          account_id: account.id,
+          type: account.type ?? null,
+          subtype: account.subtype ?? null,
+          name: account.name ?? null,
+          number: account.number ?? null,
+          balance: account.balance ?? null,
+          currency_code: account.currencyCode ?? null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "provider,account_id" },
+      );
+      if (accountResult.error) throw accountResult.error;
+
+      let next: string | null = "?accountId=" + encodeURIComponent(account.id);
+      while (next) {
+        const page = await pluggyGet<{ results?: PluggyTransaction[]; next?: string | null }>(
+          "/v2/transactions" + next,
+          apiKey,
+        );
+        const expenses = (page.results ?? []).filter(
+          (transaction) => transaction.type === "DEBIT" && transaction.amount != null && transaction.date,
+        );
+
+        if (expenses.length) {
+          const rows = expenses.map((transaction) => {
+            const classification = categoryFromTransaction(transaction);
+            return {
+              user_id: auth.user.id,
+              description: transaction.description?.trim() || "Transação bancária",
+              amount: Math.abs(Number(transaction.amount)),
+              bucket: classification.bucket,
+              category: classification.category,
+              occurred_on: transaction.date!.slice(0, 10),
+              source: "open_finance",
+              provider: "pluggy",
+              provider_transaction_id: transaction.id,
+              provider_account_id: account.id,
+            };
+          });
+          const { error } = await auth.supabase
+            .from("transactions")
+            .upsert(rows, { onConflict: "provider,provider_transaction_id", ignoreDuplicates: false });
+          if (error) throw error;
+          imported += rows.length;
+        }
+        next = page.next ?? null;
+      }
+    }
+
+    await auth.supabase
+      .from("open_finance_connections")
+      .update({ last_updated_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("id", connection.id)
+      .eq("user_id", auth.user.id);
+
+    return json(200, { accounts: accounts.length, imported });
+  } catch (error) {
+    console.error("[Open Finance] sync:", error);
+    return json(502, { error: "Não foi possível sincronizar os dados bancários agora." });
+  }
+}
