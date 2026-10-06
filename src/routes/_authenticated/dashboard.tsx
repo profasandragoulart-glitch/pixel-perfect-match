@@ -49,6 +49,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { profile, txs } = useFinance();
+  const [activeTab, setActiveTab] = useState("painel");
   const income = Number(profile.data?.monthly_income ?? 5000);
   const totals = useMemo(() => {
     const t: Record<Bucket, number> = { necessidades: 0, estilo: 0, futuro: 0 };
@@ -86,7 +87,7 @@ function Dashboard() {
       </header>
 
       <main className="mx-auto -mt-6 max-w-6xl px-6 pb-16">
-        <Tabs defaultValue="painel">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6 flex-wrap">
             <TabsTrigger value="painel">Painel</TabsTrigger>
             <TabsTrigger value="gastos">Gastos</TabsTrigger>
@@ -94,7 +95,7 @@ function Dashboard() {
             <TabsTrigger value="investir">Investir</TabsTrigger>
             <TabsTrigger value="ia">Agente IA</TabsTrigger>
           </TabsList>
-          <TabsContent value="painel"><Overview income={income} totals={totals} reserve={Number(profile.data?.emergency_reserve ?? 0)} txs={txs.data ?? []} /></TabsContent>
+          <TabsContent value="painel"><Overview income={income} totals={totals} reserve={Number(profile.data?.emergency_reserve ?? 0)} txs={txs.data ?? []} onTabChange={setActiveTab} /></TabsContent>
           <TabsContent value="gastos"><Transactions txs={txs.data ?? []} /></TabsContent>
           <TabsContent value="simulador"><Simulator initial={income} /></TabsContent>
           <TabsContent value="investir"><Investments /></TabsContent>
@@ -111,7 +112,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 
 type Tx = { id: string; description: string; amount: number; bucket: string; category: string; occurred_on: string };
 
-function Overview({ income, totals, reserve, txs }: { income: number; totals: Record<Bucket, number>; reserve: number; txs: Tx[] }) {
+function Overview({ income, totals, reserve, txs, onTabChange }: { income: number; totals: Record<Bucket, number>; reserve: number; txs: Tx[]; onTabChange: (tab: string) => void }) {
   const now = new Date();
   const monthKey = now.toISOString().slice(0, 7);
   const monthTxs = txs.filter((t) => t.occurred_on?.slice(0, 7) === monthKey);
@@ -235,7 +236,7 @@ function Overview({ income, totals, reserve, txs }: { income: number; totals: Re
               </li>
             )}
             {alerts.length === 0 && subs.length === 0 && (
-              <li className="rounded-xl bg-bucket-3/10 p-3 text-sm text-muted-foreground">Tudo dentro do orçamento. 👏 Continue assim.</li>
+              <li className="flex flex-col gap-3 rounded-xl bg-bucket-3/10 p-3 sm:flex-row sm:items-center"><span className="flex-1 text-sm text-muted-foreground">Tudo dentro do orçamento. 👏 Continue assim.</span><Button variant="outline" size="sm" onClick={() => onTabChange("simulador")}>Planejar próximo passo</Button></li>
             )}
           </ul>
         </Card>
@@ -270,11 +271,11 @@ function Overview({ income, totals, reserve, txs }: { income: number; totals: Re
         </Card>
         <Card className="flex flex-col justify-between">
           <div><span className="text-lg">🎯</span><h3 className="mt-3 font-semibold">Planeje seu salário</h3><p className="mt-1 text-sm text-muted-foreground">Simule sua renda e distribua o dinheiro.</p></div>
-          <p className="mt-5 text-sm font-medium">Abra “Simulador” acima →</p>
+          <Button variant="outline" className="mt-5 w-full" onClick={() => onTabChange("simulador")}>Planejar salário →</Button>
         </Card>
         <Card className="flex flex-col justify-between">
           <div><Bot className="h-5 w-5 text-primary" /><h3 className="mt-3 font-semibold">Converse com a IA</h3><p className="mt-1 text-sm text-muted-foreground">Pergunte onde cortar gastos ou como organizar o próximo mês.</p></div>
-          <p className="mt-5 text-sm font-medium">Abra “Agente IA” acima →</p>
+          <Button variant="outline" className="mt-5 w-full" onClick={() => onTabChange("ia")}>Perguntar à IA →</Button>
         </Card>
       </div>
 
