@@ -67,12 +67,21 @@ function Dashboard() {
     <div className="min-h-screen">
       <header className="bg-hero text-primary-foreground">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <span className="font-display text-2xl font-bold">cofre<span className="text-accent">.</span></span>
+          <div>
+            <span className="font-display text-2xl font-bold">cofre<span className="text-accent">.</span></span>
+            <p className="mt-1 text-xs opacity-60">Seu dinheiro, mais simples.</p>
+          </div>
           <Button variant="heroGhost" size="sm" onClick={signOut}><LogOut className="mr-1 h-4 w-4" />Sair</Button>
         </div>
-        <div className="mx-auto max-w-6xl px-6 pb-10">
-          <p className="text-sm opacity-70">Olá, {profile.data?.display_name ?? "você"} — renda líquida mensal</p>
-          <p className="font-display text-5xl font-bold">{brl(income)}</p>
+        <div className="mx-auto max-w-6xl px-6 pb-12 pt-2">
+          <p className="text-sm opacity-70">Olá, {profile.data?.display_name ?? "você"} 👋</p>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.16em] opacity-60">Renda líquida mensal</p>
+              <p className="font-display text-4xl font-bold sm:text-5xl">{brl(income)}</p>
+            </div>
+            <p className="max-w-sm text-sm leading-relaxed opacity-70">Veja quanto você pode gastar, onde está gastando e qual é o próximo passo.</p>
+          </div>
         </div>
       </header>
 
@@ -106,55 +115,145 @@ function Overview({ income, totals, reserve, txs }: { income: number; totals: Re
   const fixed = totals.necessidades;
   const target = fixed * 6;
   const subs = txs.filter((t) => t.category === "Assinaturas");
+  const spent = totals.necessidades + totals.estilo + totals.futuro;
+  const available = Math.max(0, income - spent);
   const alerts = BUCKETS.filter((b) => b.key !== "futuro" && totals[b.key] / (income * b.pct) >= 0.8);
+  const latest = txs.slice(0, 4);
+
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {BUCKETS.map((b) => {
-        const cap = income * b.pct;
-        const used = totals[b.key];
-        const pct = Math.min(100, (used / cap) * 100);
-        return (
-          <Card key={b.key}>
-            <div className="flex items-baseline justify-between">
-              <h3 className="font-semibold">{b.label}</h3>
-              <span className="text-sm text-muted-foreground">{Math.round(b.pct * 100)}%</span>
-            </div>
-            <p className="mt-3 font-display text-3xl font-bold">{brl(used)}</p>
-            <p className="text-sm text-muted-foreground">de {brl(cap)}</p>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
-              <div className={`h-full ${BAR[b.key]}`} style={{ width: `${pct}%` }} />
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">{b.hint}</p>
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-12">
+        <Card className="relative overflow-hidden border-primary/10 bg-primary text-primary-foreground lg:col-span-5">
+          <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-white/10" />
+          <p className="text-sm opacity-70">Disponível para gastar</p>
+          <p className="mt-2 font-display text-4xl font-bold">{brl(available)}</p>
+          <p className="mt-2 max-w-xs text-sm opacity-70">Renda menos os lançamentos registrados até agora.</p>
+          <div className="mt-6 flex items-center justify-between border-t border-white/15 pt-4 text-sm">
+            <span>Gastos no mês</span>
+            <span className="font-semibold">{brl(spent)}</span>
+          </div>
+        </Card>
+        <div className="grid gap-4 sm:grid-cols-2 lg:col-span-7">
+          <Card>
+            <p className="text-sm text-muted-foreground">Gastos registrados</p>
+            <p className="mt-2 font-display text-3xl font-bold">{brl(spent)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">de {brl(income)} da renda</p>
           </Card>
-        );
-      })}
-      <Card className="md:col-span-2">
-        <h3 className="font-semibold">Alertas do agente</h3>
-        <ul className="mt-4 space-y-3 text-sm">
-          {alerts.map((b) => (
-            <li key={b.key} className="flex gap-3"><AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
-              Você já usou {Math.round((totals[b.key] / (income * b.pct)) * 100)}% do teto de {b.label.toLowerCase()}. Segure novas compras — tente a Regra dos 3 Dias.</li>
-          ))}
-          {subs.length > 0 && (
-            <li className="flex gap-3"><AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
-              {subs.length} assinaturas somam {brl(subs.reduce((s, t) => s + Number(t.amount), 0))}/mês. Cancele as que você pouco usa.</li>
-          )}
-          {alerts.length === 0 && subs.length === 0 && <li className="text-muted-foreground">Tudo dentro do orçamento. 👏</li>}
-        </ul>
-      </Card>
+          <Card>
+            <p className="text-sm text-muted-foreground">Reserva de emergência</p>
+            <p className="mt-2 font-display text-3xl font-bold">{brl(reserve)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Meta: 6 meses de necessidades</p>
+          </Card>
+          <Card className="sm:col-span-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="font-semibold">Regra 50 / 30 / 20</p>
+                <p className="text-sm text-muted-foreground">Seu dinheiro dividido em três prioridades.</p>
+              </div>
+              <span className="rounded-full bg-secondary px-3 py-1 text-xs font-medium">{spent > income ? "Acima da renda" : Math.round((spent / Math.max(income, 1)) * 100) + "% usado"}</span>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {BUCKETS.map((b) => {
+                const cap = income * b.pct;
+                const used = totals[b.key];
+                const pct = Math.min(100, (used / Math.max(cap, 1)) * 100);
+                return (
+                  <div key={b.key} className="rounded-xl bg-muted/60 p-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{b.label}</span>
+                      <span className="text-muted-foreground">{Math.round(b.pct * 100)}%</span>
+                    </div>
+                    <p className="mt-2 font-display text-xl font-bold">{brl(used)}</p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background">
+                      <div className={"h-full " + BAR[b.key]} style={{ width: pct + "%" }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-12">
+        <Card className="lg:col-span-7">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold">O que merece sua atenção</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Alertas simples para você agir hoje.</p>
+            </div>
+            <Bot className="h-5 w-5 text-primary" />
+          </div>
+          <ul className="mt-5 space-y-3 text-sm">
+            {alerts.map((b) => (
+              <li key={b.key} className="flex gap-3 rounded-xl bg-warning/10 p-3">
+                <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
+                <span>Você já usou {Math.round((totals[b.key] / (income * b.pct)) * 100)}% do teto de {b.label.toLowerCase()}. Evite novas compras por enquanto.</span>
+              </li>
+            ))}
+            {subs.length > 0 && (
+              <li className="flex gap-3 rounded-xl bg-warning/10 p-3">
+                <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
+                <span>{subs.length} assinatura{subs.length > 1 ? "s" : ""} somam {brl(subs.reduce((s, t) => s + Number(t.amount), 0))}/mês. Vale revisar o que você realmente usa.</span>
+              </li>
+            )}
+            {alerts.length === 0 && subs.length === 0 && (
+              <li className="rounded-xl bg-bucket-3/10 p-3 text-sm text-muted-foreground">Tudo dentro do orçamento. 👏 Continue assim.</li>
+            )}
+          </ul>
+        </Card>
+
+        <Card className="lg:col-span-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold">Últimos lançamentos</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Seu movimento mais recente.</p>
+            </div>
+            <span className="text-xs text-muted-foreground">{txs.length} total</span>
+          </div>
+          <div className="mt-4 divide-y">
+            {latest.length === 0 && <p className="py-4 text-sm text-muted-foreground">Nenhum lançamento ainda.</p>}
+            {latest.map((t) => (
+              <div key={t.id} className="flex items-center justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{t.description}</p>
+                  <p className="text-xs text-muted-foreground">{t.category}</p>
+                </div>
+                <span className="shrink-0 font-display text-sm font-semibold">{brl(Number(t.amount))}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="flex flex-col justify-between">
+          <div><Landmark className="h-5 w-5 text-primary" /><h3 className="mt-3 font-semibold">Contas conectadas</h3><p className="mt-1 text-sm text-muted-foreground">Centralize seus bancos com Open Finance.</p></div>
+          <p className="mt-5 text-sm font-medium">Veja a sincronização na seção abaixo.</p>
+        </Card>
+        <Card className="flex flex-col justify-between">
+          <div><span className="text-lg">🎯</span><h3 className="mt-3 font-semibold">Planeje seu salário</h3><p className="mt-1 text-sm text-muted-foreground">Simule sua renda e distribua o dinheiro.</p></div>
+          <p className="mt-5 text-sm font-medium">Abra “Simulador” acima →</p>
+        </Card>
+        <Card className="flex flex-col justify-between">
+          <div><Bot className="h-5 w-5 text-primary" /><h3 className="mt-3 font-semibold">Converse com a IA</h3><p className="mt-1 text-sm text-muted-foreground">Pergunte onde cortar gastos ou como organizar o próximo mês.</p></div>
+          <p className="mt-5 text-sm font-medium">Abra “Agente IA” acima →</p>
+        </Card>
+      </div>
+
       <Card>
         <h3 className="font-semibold">Reserva de emergência</h3>
-        <p className="mt-3 font-display text-3xl font-bold">{brl(reserve)}</p>
-        <p className="text-sm text-muted-foreground">Meta (6 meses de fixos): {brl(target)}</p>
-        <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
-          <div className="h-full bg-bucket-3" style={{ width: `${target ? Math.min(100, (reserve / target) * 100) : 0}%` }} />
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div><p className="font-display text-3xl font-bold">{brl(reserve)}</p><p className="text-sm text-muted-foreground">Meta: {brl(target)} (6 meses de necessidades)</p></div>
+          <span className="text-sm font-medium">{target ? Math.round(Math.min(100, (reserve / target) * 100)) : 0}% da meta</span>
         </div>
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-bucket-3" style={{ width: (target ? Math.min(100, (reserve / target) * 100) : 0) + "%" }} /></div>
       </Card>
+
       <OpenFinanceCard />
     </div>
   );
 }
-
 function OpenFinanceCard() {
   const qc = useQueryClient();
   const [loading, setLoading] = useState(false);
